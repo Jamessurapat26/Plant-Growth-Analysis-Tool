@@ -1,24 +1,32 @@
 import cv2
 import numpy as np
-from ultralytics import YOLO
 import os
+from ultralytics import YOLO
 
-# Initialize model globally to avoid reloading on every call if possible, 
-# but for safety in this script context, we'll load it inside or check if loaded.
-# Better to load it once if this module is imported.
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "Model", "weights.pt")
-model = None
+from .config import MODEL_WEIGHTS_PATH
+from .utils import get_logger
+
+logger = get_logger("PlantAnalysis.Cropper")
+
+# Initialize model globally to avoid reloading
+_model = None
 
 def load_model():
-    global model
-    if model is None:
-        if not os.path.exists(MODEL_PATH):
-            raise FileNotFoundError(f"Model weights not found at {MODEL_PATH}")
-        print(f"Loading YOLO model from {MODEL_PATH}...")
-        model = YOLO(MODEL_PATH)
-    return model
+    global _model
+    if _model is None:
+        if not os.path.exists(MODEL_WEIGHTS_PATH):
+            logger.error(f"Model weights not found at {MODEL_WEIGHTS_PATH}")
+            raise FileNotFoundError(f"Model weights not found at {MODEL_WEIGHTS_PATH}")
+        
+        logger.info(f"Loading YOLO model from {MODEL_WEIGHTS_PATH}...")
+        try:
+            _model = YOLO(MODEL_WEIGHTS_PATH)
+        except Exception as e:
+            logger.error(f"Failed to load model: {e}")
+            raise
+    return _model
 
-def crop_front_panel(image_path, out_path="output.jpg"):
+def crop_front_panel(image_path, out_path=None):
     """
     Crops the front panel(s) of the plant image using YOLOv8 detection.
     
@@ -29,28 +37,33 @@ def crop_front_panel(image_path, out_path="output.jpg"):
 
     Args:
         image_path (str): Path to the input image.
-        out_path (str, optional): Path to save the cropped image. Defaults to "output.jpg".
+        out_path (str, optional): Path to save the cropped image.
 
     Returns:
         tuple: (cropped_image_np_array, output_path_used)
     """
+    logger.info(f"Processing image for cropping: {image_path}")
+    
     img = cv2.imread(image_path)
     if img is None:
+        logger.error(f"Could not read image {image_path}")
         raise ValueError(f"Could not read image {image_path}")
 
-    model = load_model()
-    
-    # Run inference
-    results = model(image_path, verbose=False)
-    boxes = results[0].boxes
-    
+    try:
+        model = load_model()
+        results = model(image_path, verbose=False)
+        boxes = results[0].boxes
+    except Exception as e:
+        logger.error(f"Inference failed: {e}")
+        return img, out_path
+
     final_img = img
     
     if len(boxes) > 0:
+        logger.info(f"Detected {len(boxes)} objects.")
         # Collect valid detections
         detections = []
         for box in boxes:
-            # Optional: Filter by confidence if needed, e.g. box.conf > 0.3
             x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
             detections.append({'coords': (x1, y1, x2, y2)})
         
@@ -88,20 +101,12 @@ def crop_front_panel(image_path, out_path="output.jpg"):
             
             # Stitch horizontally
             final_img = cv2.hconcat(resized_crops)
-            print(f"Merged {len(crops)} detected sides into one image.")
+            logger.info(f"Merged {len(crops)} detected sides into one image.")
     else:
-        print(f"Warning: No object detected in {image_path}. Returning original image.")
+        logger.warning(f"No object detected in {image_path}. Returning original image.")
 
     if out_path:
         cv2.imwrite(out_path, final_img)
+        logger.info(f"Saved cropped image to {out_path}")
         
     return final_img, out_path
-
-
-if __name__ == "__main__":
-    # Example usage
-    try:
-        crop_front_panel("test_img1.jpg", "cropped_test_ai.jpg")
-        print("Test AI crop successful.")
-    except Exception as e:
-        print(f"Error: {e}")

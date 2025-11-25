@@ -1,24 +1,26 @@
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
-
 from PIL import Image, ImageTk
 
-from plant_analysis import PlantAnalyzer
+from .analyzer import PlantAnalyzer
+from .config import WINDOW_TITLE, WINDOW_SIZE, PREVIEW_SIZE
+from .utils import get_logger
 
+logger = get_logger("PlantAnalysis.GUI")
 
 class PlantGrowthApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Plant Growth Comparison")
-        self.root.geometry("800x600")
+        self.root.title(WINDOW_TITLE)
+        self.root.geometry(WINDOW_SIZE)
 
         # Initialize analyzer
         self.analyzer = PlantAnalyzer()
 
         self.img1_path = None
         self.img2_path = None
-        self.preview_size = (250, 250)
+        self.preview_size = PREVIEW_SIZE
 
         self._setup_ui()
 
@@ -126,7 +128,7 @@ class PlantGrowthApp:
             label_widget.config(image=photo, text="", width=0, height=0)
             label_widget.image = photo  # Keep reference
         except Exception as e:
-            print(f"Error loading preview: {e}")
+            logger.error(f"Error loading preview: {e}")
             label_widget.config(text="Error loading image")
 
     def compare_images(self):
@@ -135,14 +137,15 @@ class PlantGrowthApp:
             return
 
         try:
+            logger.info("Starting comparison via GUI")
             results = self.analyzer.compare_images(self.img1_path, self.img2_path)
 
-            # Extract results from new data structure
+            # Extract results
             img1_data = results["image1"]
             img2_data = results["image2"]
             growth_data = results["growth"]
 
-            # Format the results with plant coverage only
+            # Format the results
             result_text = "BEFORE IMAGE:\n"
             result_text += f"  Plant Coverage: {img1_data['plant_percentage']:.2f}%\n\n"
 
@@ -155,13 +158,5 @@ class PlantGrowthApp:
             self.result_label.config(text=result_text, fg="#333")
 
         except Exception as e:
+            logger.error(f"GUI Error: {e}")
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
-
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = PlantGrowthApp(root)
-    root.mainloop()

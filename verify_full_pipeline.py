@@ -1,6 +1,14 @@
 import os
 import json
-from plant_analysis import PlantAnalyzer
+import sys
+
+# Add src to path so we can import if not installed as package
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
+from plant_analysis.analyzer import PlantAnalyzer
+from plant_analysis.utils import setup_logging
+
+setup_logging()
 
 def main():
     print("Starting verification of full pipeline...")
