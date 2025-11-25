@@ -105,7 +105,3 @@ If you have `uv` installed, you can run the application directly without manuall
 -   **"Model weights not found"**: Check that `Model/weights.pt` exists.
 -   **"No object detected"**: The AI model might not have found the plant panel. The tool will fall back to using the original image.
 -   **Dependency Issues**: If using `uv`, try running `uv sync` to refresh the environment. If using `pip`, ensure your virtual environment is active.
-
-## License
-
-[Your License Here]
