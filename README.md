@@ -10,86 +10,98 @@ This project provides a Python-based tool to analyze and compare plant growth be
 -   **Growth Calculation**: Calculates the percentage of plant coverage (green/purple pixels) and compares it between two images (Before vs. After).
 -   **GUI Interface**: User-friendly Graphical User Interface (GUI) for easy operation.
 
+## How It Works
+
+### 1. Image Segmentation (AI Cropping)
+The tool uses a pre-trained **YOLOv8** model to detect the plant panel in the image.
+- **Single Detection**: If one panel is found, it is cropped directly.
+- **Multiple Detections**: If multiple panels (sides) are found, they are sorted left-to-right, resized to the same height, and stitched together horizontally into a single image.
+- **No Detection**: If no panel is found, the original image is used.
+
+### 2. Image Enhancement
+Before analysis, the image can be enhanced to improve detection accuracy:
+- **Contrast/Brightness**: Adjusted using linear scaling.
+- **Saturation**: Adjusted in the HSV color space to make plant colors more distinct.
+
+### 3. Plant Coverage Analysis
+The core analysis uses **Color Thresholding** in the HSV (Hue, Saturation, Value) space.
+- **Green Mask**: Detects green leaves (Hue: 35-85).
+- **Purple Mask**: Detects purple leaves (Hue: 125-155).
+- **Calculation**:
+  `Plant Percentage = (Count of Green + Purple Pixels / Total Pixels) * 100`
+
+### 4. Growth Comparison
+To measure growth, the tool compares the "Plant Percentage" of the *Before* and *After* images.
+- **Absolute Growth**: `Percentage_After - Percentage_Before`
+- **Relative Growth**: `(Absolute Growth / Percentage_Before) * 100`
+
 ## Prerequisites
 
 -   Python 3.8 or higher
--   A virtual environment is recommended.
+-   **Optional but Recommended**: [uv](https://github.com/astral-sh/uv) (An extremely fast Python package installer and resolver).
 
-## Installation
+## Installation & Usage
 
-1.  **Clone or Download** the repository to your local machine.
+You can run this project using either `uv` (recommended) or standard Python/pip.
 
-2.  **Create and Activate a Virtual Environment**:
-    It is highly recommended to use a virtual environment to manage dependencies.
+### Option 1: Using `uv` (Fastest)
 
+If you have `uv` installed, you can run the application directly without manually creating a virtual environment.
+
+1.  **Run the Application**:
+    ```bash
+    uv run main.py
+    ```
+    *`uv` will automatically create a virtual environment, install dependencies from `pyproject.toml`, and launch the app.*
+
+2.  **Run Verification Script**:
+    ```bash
+    uv run verify_full_pipeline.py
+    ```
+
+### Option 2: Using Standard Python (`pip`)
+
+1.  **Create and Activate a Virtual Environment**:
     ```bash
     # Create virtual environment
     python3 -m venv .venv
 
     # Activate virtual environment
-    source .venv/bin/activate
+    source .venv/bin/activate  # On macOS/Linux
+    # .venv\Scripts\activate   # On Windows
     ```
 
-3.  **Install Dependencies**:
-    Install the required Python packages using `pip`.
-
+2.  **Install Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
 
-    *Note: This will install `opencv-python`, `numpy`, `pillow`, and `ultralytics`.*
-
-4.  **Model Weights**:
-    Ensure the YOLOv8 model weights file is located at `Model/weights.pt`.
-
-## Usage
-
-### Running the GUI Application
-
-The easiest way to use the tool is via the Graphical User Interface.
-
-1.  **Activate the virtual environment** (if not already active):
+3.  **Run the Application**:
     ```bash
-    source .venv/bin/activate
+    python main.py
     ```
 
-2.  **Run the GUI script**:
-    ```bash
-    python gui.py
-    ```
+## Using the App
 
-3.  **Using the App**:
-    -   Click **"Select Before Image"** to choose the initial image.
-    -   Click **"Select After Image"** to choose the later image.
-    -   Click **"Compare Growth"** to run the analysis.
-    -   The results (Plant Coverage %, Absolute Growth, Relative Growth) will be displayed.
-
-### Running the Verification Script
-
-To verify the pipeline works correctly on test images:
-
-```bash
-source .venv/bin/activate
-python verify_full_pipeline.py
-```
-
-This script will process `test_img1.jpg` and `test_img2.jpg` (if present), generating debug images (`debug_cropped_*.jpg`, `debug_enhanced_*.jpg`) and printing growth statistics.
+1.  Click **"Select Before Image"** to choose the initial image.
+2.  Click **"Select After Image"** to choose the later image.
+3.  Click **"Compare Growth"** to run the analysis.
+4.  The results (Plant Coverage %, Absolute Growth, Relative Growth) will be displayed.
 
 ## Project Structure
 
--   `gui.py`: Main entry point for the GUI application.
--   `plant_analysis.py`: Core logic for plant analysis, including color thresholding and percentage calculation.
--   `crop.py`: Handles AI-based object detection and cropping using YOLOv8.
--   `verify_full_pipeline.py`: Script to verify the full processing pipeline.
--   `Model/weights.pt`: Pre-trained YOLOv8 model weights for plant detection.
--   `requirements.txt`: List of Python dependencies.
+-   `src/plant_analysis/`: Source code package.
+    -   `analyzer.py`: Core logic for plant analysis.
+    -   `cropper.py`: AI-based object detection and cropping.
+    -   `gui.py`: Graphical User Interface.
+    -   `config.py`: Configuration constants.
+-   `main.py`: Entry point for the application.
+-   `verify_full_pipeline.py`: Script to verify the pipeline.
+-   `Model/weights.pt`: Pre-trained YOLOv8 model weights.
+-   `pyproject.toml`: Project configuration and dependencies.
 
 ## Troubleshooting
 
--   **"No module named ..."**: Ensure you have activated the virtual environment (`source .venv/bin/activate`) and installed requirements.
 -   **"Model weights not found"**: Check that `Model/weights.pt` exists.
 -   **"No object detected"**: The AI model might not have found the plant panel. The tool will fall back to using the original image.
-
-## License
-
-[Your License Here]
+-   **Dependency Issues**: If using `uv`, try running `uv sync` to refresh the environment. If using `pip`, ensure your virtual environment is active.
